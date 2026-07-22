@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>코딩 문제 카드장</title>
+<style>
+  *{box-sizing:border-box;}
+  body{
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background:#f7f6f3; color:#2c2c2a; margin:0; padding:24px 16px 60px;
+  }
+  .wrap{max-width:680px; margin:0 auto;}
+  h1{font-size:20px; font-weight:600; margin:0 0 4px;}
+  .sub{font-size:13px; color:#6b6a64; margin:0 0 20px;}
+  .tabs{display:flex; gap:6px; margin-bottom:16px; border-bottom:1px solid #e3e1db;}
+  .tab{padding:8px 14px; font-size:14px; cursor:pointer; color:#6b6a64; border-bottom:2px solid transparent; user-select:none;}
+  .tab.active{color:#2c2c2a; border-bottom-color:#378ADD; font-weight:600;}
+  .panel{display:none;}
+  .panel.active{display:block;}
+
+  .stats{display:flex; gap:8px; margin-bottom:14px; font-size:13px; color:#6b6a64; flex-wrap:wrap;}
+  .pill{background:#fff; border:1px solid #e3e1db; border-radius:20px; padding:4px 12px;}
+  .filter-row{display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap;}
+  .filter-btn{font-size:13px; padding:6px 12px; border-radius:20px; border:1px solid #c9c6bd; background:#fff; cursor:pointer;}
+  .filter-btn.active{background:#2c2c2a; color:#fff; border-color:#2c2c2a;}
+
+  .card{background:#fff; border:1px solid #e3e1db; border-radius:14px; padding:20px;}
+  .q{font-size:16px; line-height:1.6; white-space:pre-wrap; margin:0 0 14px;}
+
+  textarea{
+    width:100%; font-family:"SF Mono", Consolas, monospace; font-size:13px; padding:10px;
+    border:1px solid #c9c6bd; border-radius:8px; background:#fff; color:#2c2c2a; resize:vertical;
+  }
+  #code-input{min-height:120px;}
+
+  .row{display:flex; gap:8px; margin-top:10px;}
+  button{font-size:14px; padding:9px 14px; border-radius:8px; border:1px solid #c9c6bd; background:#fff; color:#2c2c2a; cursor:pointer;}
+  button:hover{background:#f1efe8;}
+  button:active{transform:scale(0.98);}
+  button.primary{background:#2c2c2a; color:#fff; border-color:#2c2c2a;}
+  button.grow{flex:1;}
+  button.correct{background:#eaf3de; color:#27500a; border-color:#c0dd97;}
+  button.correct.active{background:#639922; color:#fff;}
+  button.wrong{background:#fcebeb; color:#791f1f; border-color:#f0a5a5;}
+  button.wrong.active{background:#e24b4a; color:#fff;}
+
+  .output-box{
+    margin-top:10px; background:#1e1e1c; color:#e8e6e0; border-radius:8px; padding:12px 14px;
+    font-family:"SF Mono", Consolas, monospace; font-size:13px; white-space:pre-wrap; min-height:20px; display:none;
+  }
+  .output-box.show{display:block;}
+  .output-box.error{color:#f5a3a3;}
+
+  .ref-box{
+    margin-top:10px; background:#faf9f6; border:1px dashed #c9c6bd; border-radius:8px; padding:12px 14px;
+    font-family:"SF Mono", Consolas, monospace; font-size:13px; white-space:pre-wrap; display:none;
+  }
+  .ref-box.show{display:block;}
+
+  label{font-size:13px; color:#6b6a64; display:block; margin:14px 0 6px;}
+  label:first-child{margin-top:0;}
+  input[type=text]{width:100%; font-size:14px; padding:9px 10px; border:1px solid #c9c6bd; border-radius:8px;}
+  select{width:100%; font-size:14px; padding:9px 10px; border:1px solid #c9c6bd; border-radius:8px; background:#fff;}
+
+  .msg{font-size:13px; margin-top:10px; padding:8px 12px; border-radius:8px; display:none;}
+  .msg.show{display:block;}
+
+  .empty{text-align:center; color:#6b6a64; padding:40px 10px; font-size:14px;}
+
+  .list-item{background:#fff; border:1px solid #e3e1db; border-radius:10px; padding:12px 14px; margin-bottom:8px;}
+  .list-item .q{font-size:14px; margin-bottom:8px;}
+  .list-top{display:flex; align-items:flex-start; gap:8px;}
+  .list-top input[type=checkbox]{margin-top:3px;}
+  .list-actions{display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;}
+  .list-actions button{font-size:12px; padding:5px 10px;}
+  .del-btn{color:#791f1f; border-color:#f0a5a5;}
+  .badge{font-size:11px; padding:3px 8px; border-radius:8px;}
+  .list-ref{
+    margin-top:8px; background:#faf9f6; border:1px dashed #c9c6bd; border-radius:8px; padding:10px 12px;
+    font-family:"SF Mono", Consolas, monospace; font-size:12px; white-space:pre-wrap; display:none;
+  }
+  .list-ref.show{display:block;}
+  .edit-form{margin-top:10px; display:none; border-top:1px solid #e3e1db; padding-top:10px;}
+  .edit-form.show{display:block;}
+  .toolbar{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; gap:8px; flex-wrap:wrap;}
+  .toolbar span{font-size:13px; color:#6b6a64;}
+  .toolbar select{width:auto; flex:none;}
+
+  .star-widget{display:inline-flex; gap:2px; vertical-align:middle;}
+  .star{cursor:pointer; font-size:17px; color:#d9a441; user-select:none; line-height:1;}
+  .star.empty{color:#d7d3c8;}
+  .star-row{display:flex; align-items:center; gap:8px; margin-top:10px;}
+  .star-row .label-inline{font-size:13px; color:#6b6a64;}
+
+  .status-toggle-row{display:flex; gap:6px; margin-top:6px;}
+  .status-toggle-row button{font-size:12px; padding:5px 10px;}
+
+  .list-item.is-child{margin-left:22px; border-left:3px solid #d8d3c6; position:relative;}
+  .list-item.is-child::before{content:"↳"; position:absolute; left:-20px; top:12px; color:#a8a49a; font-size:13px;}
+
+  .star-filter-select{width:auto; font-size:13px; padding:6px 10px; border-radius:20px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>코딩 문제 카드장</h1>
+  <p class="sub" id="status-msg">파이썬 실행 환경 로딩 중...</p>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="review">복습하기</div>
+    <div class="tab" data-tab="add">문제 추가</div>
+    <div class="tab" data-tab="list">전체 목록</div>
+  </div>
+
+  <div class="panel active" id="panel-review">
+    <div class="filter-row">
+      <button class="filter-btn active" data-mode="all">전체</button>
+      <button class="filter-btn" data-mode="wrong">틀린 것만</button>
+      <button class="filter-btn" data-mode="selected" id="selected-filter-btn" style="display:none;">선택한 문제</button>
+      <select id="star-filter-select" class="star-filter-select">
+        <option value="">중요도 전체</option>
+        <option value="eq3">★★★ 만</option>
+        <option value="eq2">★★ 만</option>
+        <option value="eq1">★ 만</option>
+        <option value="ge1">★ 이상</option>
+        <option value="ge2">★★ 이상</option>
+      </select>
+    </div>
+    <div class="stats">
+      <span class="pill" id="stat-total">전체 0개</span>
+      <span class="pill" id="stat-pool">복습 대상 0개</span>
+    </div>
+    <div id="review-area"></div>
+  </div>
+
+  <div class="panel" id="panel-add">
+    <label>문제</label>
+    <textarea id="q-input" style="min-height:70px;" placeholder="문제 내용을 적어주세요"></textarea>
+    <label>시작 코드 (함수 선언부, 선택)</label>
+    <textarea id="starter-input" style="min-height:50px;">def solve(price):
+    </textarea>
+    <label>참고 정답 (선택)</label>
+    <textarea id="ref-input" style="min-height:70px;" placeholder="내 모범 풀이나 힌트를 적어두세요"></textarea>
+    <label>선행 문제 (선택 — 맞혀야 이 문제가 열려요)</label>
+    <select id="parent-input">
+      <option value="">없음 (독립 문제)</option>
+    </select>
+    <div class="row">
+      <button class="primary grow" id="save-btn">카드 저장하기</button>
+    </div>
+    <div class="msg" id="save-msg"></div>
+  </div>
+
+  <div class="panel" id="panel-list">
+    <div class="toolbar">
+      <span></span>
+      <div class="row" style="margin:0;">
+        <button id="reset-status-btn">전체 상태 초기화</button>
+        <button id="export-btn">백업 내보내기</button>
+        <button id="import-btn">백업 불러오기</button>
+        <input type="file" id="import-file-input" accept="application/json" style="display:none;">
+      </div>
+    </div>
+    <div class="msg" id="backup-msg"></div>
+    <div class="toolbar">
+      <span id="select-count">0개 선택됨</span>
+      <select id="list-sort-select">
+        <option value="default">기본 순서</option>
+        <option value="stars-desc">중요도 높은순</option>
+        <option value="stars-asc">중요도 낮은순</option>
+        <option value="status-desc">정답 먼저</option>
+        <option value="status-asc">오답·미채점 먼저</option>
+      </select>
+      <button id="review-selected-btn">선택한 문제만 복습하기</button>
+    </div>
+    <div id="list-area"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
+<script>
+const STORAGE_KEY = 'code_flashcards_data_v1';
+let cards = [];
+let pyodide = null;
+let reviewMode = 'all';
+let starFilter = '';
+let listSortMode = 'default';
+let selectedIds = [];
+let currentCard = null;
+let reviewQueue = [];   // 이번 라운드에서 뽑을 카드 id들을 순서대로 담아놓은 큐
+let queueIndex = -1;    // reviewQueue에서 현재 위치
+let sessionActive = false; // "시작!"을 눌러 큐가 준비된 상태인지
+let sessionDone = false;   // 이번 라운드의 큐를 다 돌았는지
+
+function esc(s){
+  const d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+function newId(){
+  return 'c' + Date.now() + Math.random().toString(36).slice(2);
+}
+
+function loadCards(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    cards = raw ? JSON.parse(raw) : [];
+  }catch(e){
+    cards = [];
+  }
+  let changed = false;
+  cards.forEach(c => {
+    if(!c.id){ c.id = newId(); changed = true; }
+    if(c.status === undefined){ c.status = c.completed ? 'correct' : null; changed = true; }
+    if(c.stars === undefined || c.stars === null){ c.stars = 0; changed = true; }
+  });
+  if(changed) saveCards();
+}
+function saveCards(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(cards));
+}
+
+function isUnlocked(card){
+  if(!card.parentId) return true;
+  const parent = cards.find(c => c.id === card.parentId);
+  if(!parent) return true;
+  return parent.status === 'correct';
+}
+
+function matchesStarFilter(c){
+  const s = c.stars || 0;
+  switch(starFilter){
+    case 'eq3': return s === 3;
+    case 'eq2': return s === 2;
+    case 'eq1': return s === 1;
+    case 'ge1': return s >= 1;
+    case 'ge2': return s >= 2;
+    default: return true;
+  }
+}
+
+function getPool(){
+  return cards.filter(c => {
+    if(reviewMode === 'wrong' && c.status !== 'wrong') return false;
+    if(reviewMode === 'selected' && !selectedIds.includes(c.id)) return false;
+    if(!matchesStarFilter(c)) return false;
+    return true;
+  });
+}
+
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// 이번 풀(pool) 안에서 무작위 순서를 만들되, 선행문제(parentId)가 있고
+// 그 선행문제도 같은 풀에 있다면 선행문제보다 먼저 나오지 않도록 순서를 보장한다.
+// (선행문제가 이번 풀에 없다면 — 다른 필터에 걸러졌다면 — 제약 없이 아무 때나 나올 수 있다)
+function buildOrderedQueue(poolCards){
+  const idSet = new Set(poolCards.map(c => c.id));
+  const remaining = new Map(poolCards.map(c => [c.id, c]));
+  const placed = new Set();
+  const result = [];
+  function isReady(c){
+    if(!c.parentId) return true;
+    if(c.parentId === c.id) return true;
+    if(!idSet.has(c.parentId)) return true;
+    return placed.has(c.parentId);
+  }
+  while(remaining.size > 0){
+    const readyIds = [...remaining.keys()].filter(id => isReady(remaining.get(id)));
+    if(readyIds.length === 0){
+      // 이론상 순환 참조 등 예외 상황 — 남은 걸 그냥 다 넣어서 무한루프 방지
+      [...remaining.keys()].forEach(id => { result.push(id); placed.add(id); });
+      remaining.clear();
+      break;
+    }
+    const pick = readyIds[Math.floor(Math.random() * readyIds.length)];
+    result.push(pick);
+    placed.add(pick);
+    remaining.delete(pick);
+  }
+  return result;
+}
+
+// "시작!" - 현재 필터 조건에 맞는 문제 전부(잠긴 문제 포함)를 대상으로 새 라운드를 시작
+function startSession(){
+  const pool = getPool();
+  if(pool.length === 0){
+    sessionActive = false;
+    sessionDone = false;
+    currentCard = null;
+    return;
+  }
+  reviewQueue = buildOrderedQueue(pool);
+  queueIndex = 0;
+  sessionActive = true;
+  sessionDone = false;
+  currentCard = cards.find(c => c.id === reviewQueue[0]) || null;
+}
+
+// 다음 문제로 이동. 큐를 다 쓰면 라운드 종료 — 자동으로 다시 섞지 않고 멈춘다.
+function nextCard(){
+  queueIndex++;
+  if(queueIndex >= reviewQueue.length){
+    sessionDone = true;
+    currentCard = null;
+    return;
+  }
+  const id = reviewQueue[queueIndex];
+  const found = cards.find(c => c.id === id);
+  if(!found){
+    // 그 사이 삭제된 카드면 건너뜀
+    nextCard();
+    return;
+  }
+  currentCard = found;
+}
+
+// 이전 문제로 돌아가기. 큐의 맨 처음이면 더 갈 곳이 없음.
+function prevCard(){
+  if(queueIndex <= 0) return;
+  queueIndex--;
+  sessionDone = false;
+  const id = reviewQueue[queueIndex];
+  const found = cards.find(c => c.id === id);
+  if(!found){
+    // 그 사이 삭제된 카드면 한 칸 더 앞으로
+    prevCard();
+    return;
+  }
+  currentCard = found;
+}
+
+function populateParentSelect(){
+  const sel = document.getElementById('parent-input');
+  sel.innerHTML = '<option value="">없음 (독립 문제)</option>';
+  cards.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = c.q.slice(0, 30) + (c.q.length > 30 ? '...' : '');
+    sel.appendChild(opt);
+  });
+}
+
+function starWidgetHtml(card, source){
+  const cur = card.stars || 0;
+  return `<span class="star-widget" data-source="${source}" data-id="${card.id}">` +
+    [1,2,3].map(n => `<span class="star ${cur >= n ? '' : 'empty'}" data-id="${card.id}" data-val="${n}">${cur >= n ? '★' : '☆'}</span>`).join('') +
+    `</span>`;
+}
+
+function setStars(id, val){
+  const c = cards.find(x => x.id === id);
+  if(!c) return;
+  c.stars = (c.stars === val) ? 0 : val;
+  saveCards();
+}
+
+function renderStats(){
+  document.getElementById('stat-total').textContent = `전체 ${cards.length}개`;
+  document.getElementById('stat-pool').textContent = `복습 대상 ${getPool().length}개`;
+}
+
+function renderReview(){
+  const area = document.getElementById('review-area');
+  if(cards.length === 0){
+    area.innerHTML = '<div class="empty">아직 저장된 문제가 없어요.<br>"문제 추가" 탭에서 문제를 만들어보세요.</div>';
+    renderStats();
+    return;
+  }
+  const pool = getPool();
+  if(pool.length === 0){
+    let reason = '조건에 맞는 문제가 없어요.';
+    if(reviewMode === 'wrong') reason = '틀린 문제가 없어요. 잘하고 있어요!';
+    if(reviewMode === 'selected') reason = '선택한 문제가 없거나 아직 잠겨있어요.';
+    sessionActive = false;
+    area.innerHTML = `<div class="empty">${reason}</div>`;
+    renderStats();
+    return;
+  }
+  if(!sessionActive){
+    area.innerHTML = `
+      <div class="card">
+        <p class="q" style="margin-bottom:18px;">전체 / 틀린 것만 + 중요도를 고른 뒤 시작하면,<br>이번 라운드에 해당하는 문제 ${pool.length}개를 한 번씩 겹치지 않게 순서대로 풀어볼게요.<br>(선행 문제가 있는 문제는 선행 문제보다 먼저 나오지 않아요)</p>
+        <div class="row">
+          <button class="primary grow" id="start-review-btn">시작!</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('start-review-btn').addEventListener('click', () => {
+      startSession();
+      renderReview();
+    });
+    renderStats();
+    return;
+  }
+  if(sessionDone){
+    area.innerHTML = `
+      <div class="card">
+        <p class="q" style="margin-bottom:18px;">이번 라운드 문제 ${reviewQueue.length}개를 모두 풀었어요! 🎉</p>
+        <div class="row">
+          <button id="prev-from-done-btn">← 마지막 문제로</button>
+          <button class="primary grow" id="restart-review-btn">다시 섞어서 시작!</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('prev-from-done-btn').addEventListener('click', () => {
+      prevCard();
+      renderReview();
+    });
+    document.getElementById('restart-review-btn').addEventListener('click', () => {
+      startSession();
+      renderReview();
+    });
+    renderStats();
+    return;
+  }
+  if(!currentCard || !cards.find(c => c.id === currentCard.id)){
+    // 진행 중이던 카드가 그 사이 삭제된 경우 다음 카드로 건너뜀
+    nextCard();
+    renderReview();
+    return;
+  }
+  const card = currentCard;
+  const defaultStarter = card.starter && card.starter.trim() ? card.starter : 'def solve():\n    pass\n\nprint(solve())';
+  area.innerHTML = `
+    <div class="card">
+      <p class="q">${esc(card.q)}</p>
+      <textarea id="code-input">${esc(defaultStarter)}</textarea>
+      <div class="row">
+        <button class="primary grow" id="run-btn">실행하기</button>
+        <button id="ref-btn">참고 정답 보기</button>
+      </div>
+      <div class="output-box" id="output-box"></div>
+      <div class="ref-box" id="ref-box">${card.ref ? esc(card.ref) : '(등록된 참고 정답이 없어요)'}</div>
+      <div class="row">
+        <button class="wrong grow ${card.status === 'wrong' ? 'active' : ''}" id="mark-wrong-btn">틀렸어요</button>
+        <button class="correct grow ${card.status === 'correct' ? 'active' : ''}" id="mark-correct-btn">맞았어요</button>
+      </div>
+      <div class="star-row">
+        <span class="label-inline">중요도</span>
+        ${starWidgetHtml(card, 'review')}
+      </div>
+      <div class="row">
+        <button id="prev-btn" ${queueIndex <= 0 ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''}>← 이전 문제</button>
+        <button class="grow" id="next-btn">다음 문제</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('run-btn').addEventListener('click', runCode);
+  document.getElementById('code-input').addEventListener('keydown', handleTabKey);
+  document.getElementById('ref-btn').addEventListener('click', () => {
+    document.getElementById('ref-box').classList.toggle('show');
+  });
+  document.getElementById('mark-wrong-btn').addEventListener('click', () => {
+    card.status = (card.status === 'wrong') ? null : 'wrong';
+    saveCards();
+    renderReview();
+  });
+  document.getElementById('mark-correct-btn').addEventListener('click', () => {
+    card.status = (card.status === 'correct') ? null : 'correct';
+    saveCards();
+    renderReview();
+  });
+  document.getElementById('prev-btn').addEventListener('click', () => {
+    prevCard();
+    renderReview();
+  });
+  document.getElementById('next-btn').addEventListener('click', () => {
+    nextCard();
+    renderReview();
+  });
+  area.querySelectorAll('.star').forEach(st => {
+    st.addEventListener('click', (e) => {
+      const id = e.target.dataset.id;
+      const val = parseInt(e.target.dataset.val, 10);
+      setStars(id, val);
+      renderReview();
+      renderStats();
+    });
+  });
+  renderStats();
+}
+
+async function runCode(){
+  const outBox = document.getElementById('output-box');
+  outBox.classList.remove('error');
+  outBox.classList.add('show');
+  if(!pyodide){
+    outBox.textContent = '아직 파이썬 환경이 로딩 중이에요. 잠시만 기다려주세요...';
+    return;
+  }
+  const code = document.getElementById('code-input').value;
+  let captured = '';
+  pyodide.setStdout({ batched: (s) => { captured += s + '\n'; } });
+  try{
+    await pyodide.runPythonAsync(code);
+    outBox.textContent = captured.length ? captured : '(출력 없음)';
+  }catch(e){
+    outBox.classList.add('error');
+    outBox.textContent = (captured ? captured : '') + '에러:\n' + e.message;
+  }
+}
+
+function handleTabKey(e){
+  if(e.key !== 'Tab') return;
+  e.preventDefault();
+  const el = e.target;
+  const start = el.selectionStart;
+  const end = el.selectionEnd;
+  if(e.shiftKey){
+    const lineStart = el.value.lastIndexOf('\n', start - 1) + 1;
+    if(el.value.slice(lineStart, lineStart + 4) === '    '){
+      el.value = el.value.slice(0, lineStart) + el.value.slice(lineStart + 4);
+      el.selectionStart = start - 4;
+      el.selectionEnd = end - 4;
+    }
+  }else{
+    el.value = el.value.slice(0, start) + '    ' + el.value.slice(end);
+    el.selectionStart = el.selectionEnd = start + 4;
+  }
+}
+
+function statusRank(c){
+  if(c.status === 'correct') return 2;
+  if(c.status === 'wrong') return 1;
+  return 0;
+}
+
+function sortSiblings(arr, mode){
+  if(mode === 'default') return arr;
+  const asc = mode.endsWith('asc');
+  const copy = arr.slice();
+  copy.sort((a, b) => {
+    let va, vb;
+    if(mode.startsWith('stars')){ va = a.stars || 0; vb = b.stars || 0; }
+    else { va = statusRank(a); vb = statusRank(b); }
+    return asc ? va - vb : vb - va;
+  });
+  return copy;
+}
+
+function getSortedFlatList(mode){
+  const idSet = new Set(cards.map(c => c.id));
+  const childrenMap = {};
+  const roots = [];
+  cards.forEach(c => {
+    if(c.parentId && idSet.has(c.parentId) && c.parentId !== c.id){
+      if(!childrenMap[c.parentId]) childrenMap[c.parentId] = [];
+      childrenMap[c.parentId].push(c);
+    }else{
+      roots.push(c);
+    }
+  });
+  const result = [];
+  const visited = new Set();
+  function addWithChildren(card, depth){
+    if(visited.has(card.id)) return;
+    visited.add(card.id);
+    result.push({card, depth});
+    const kids = childrenMap[card.id];
+    if(kids && kids.length){
+      sortSiblings(kids, mode).forEach(k => addWithChildren(k, depth + 1));
+    }
+  }
+  sortSiblings(roots, mode).forEach(r => addWithChildren(r, 0));
+  return result;
+}
+
+function renderList(){
+  const area = document.getElementById('list-area');
+  if(cards.length === 0){
+    area.innerHTML = '<div class="empty">저장된 문제가 없어요.</div>';
+    document.getElementById('select-count').textContent = '0개 선택됨';
+    return;
+  }
+  const flat = getSortedFlatList(listSortMode);
+  area.innerHTML = flat.map(({card: c, depth}) => {
+    let statusBadge = '';
+    if(c.status === 'correct') statusBadge = '<span class="badge" style="background:#eaf3de;color:#27500a;">맞음</span>';
+    else if(c.status === 'wrong') statusBadge = '<span class="badge" style="background:#fcebeb;color:#791f1f;">틀림</span>';
+    else statusBadge = '<span class="badge" style="background:#f1efe8;color:#6b6a64;">미채점</span>';
+    let lockBadge = '';
+    if(c.parentId){
+      lockBadge = isUnlocked(c)
+        ? '<span class="badge" style="background:#e6f1fb;color:#0c447c;">연결 · 열림</span>'
+        : '<span class="badge" style="background:#faeeda;color:#633806;">연결 · 잠김</span>';
+    }
+    const checked = selectedIds.includes(c.id) ? 'checked' : '';
+    const childClass = depth > 0 ? 'is-child' : '';
+    return `
+    <div class="list-item ${childClass}" data-id="${c.id}">
+      <div class="list-top">
+        <input type="checkbox" class="sel-checkbox" data-id="${c.id}" ${checked}>
+        <div style="flex:1;">
+          <div class="q">${esc(c.q)}</div>
+          <div>${statusBadge} ${lockBadge} ${starWidgetHtml(c, 'list')}</div>
+        </div>
+      </div>
+      <div class="status-toggle-row">
+        <button class="wrong status-wrong-btn ${c.status === 'wrong' ? 'active' : ''}" data-id="${c.id}">틀렸어요</button>
+        <button class="correct status-correct-btn ${c.status === 'correct' ? 'active' : ''}" data-id="${c.id}">맞았어요</button>
+      </div>
+      <div class="list-actions">
+        <button class="ref-toggle-btn" data-id="${c.id}">정답보기</button>
+        <button class="edit-toggle-btn" data-id="${c.id}">수정</button>
+        <button class="del-btn" data-id="${c.id}">삭제</button>
+      </div>
+      <div class="list-ref" id="list-ref-${c.id}">${c.ref ? esc(c.ref) : '(등록된 참고 정답이 없어요)'}</div>
+      <div class="edit-form" id="edit-form-${c.id}">
+        <label>문제</label>
+        <textarea class="edit-q" style="min-height:60px;">${esc(c.q)}</textarea>
+        <label>시작 코드</label>
+        <textarea class="edit-starter" style="min-height:40px;">${esc(c.starter || '')}</textarea>
+        <label>참고 정답</label>
+        <textarea class="edit-ref" style="min-height:60px;">${esc(c.ref || '')}</textarea>
+        <div class="row">
+          <button class="primary grow save-edit-btn" data-id="${c.id}">저장</button>
+          <button class="cancel-edit-btn" data-id="${c.id}">취소</button>
+        </div>
+      </div>
+    </div>
+  `;
+  }).join('');
+
+  area.querySelectorAll('.sel-checkbox').forEach(box => {
+    box.addEventListener('change', (e) => {
+      const id = e.target.dataset.id;
+      if(e.target.checked){
+        if(!selectedIds.includes(id)) selectedIds.push(id);
+      }else{
+        selectedIds = selectedIds.filter(x => x !== id);
+      }
+      document.getElementById('select-count').textContent = `${selectedIds.length}개 선택됨`;
+      document.getElementById('selected-filter-btn').style.display = selectedIds.length ? 'inline-block' : 'none';
+    });
+  });
+  area.querySelectorAll('.star').forEach(st => {
+    st.addEventListener('click', (e) => {
+      const id = e.target.dataset.id;
+      const val = parseInt(e.target.dataset.val, 10);
+      setStars(id, val);
+      renderList();
+      renderReview();
+      renderStats();
+    });
+  });
+  area.querySelectorAll('.status-wrong-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const c = cards.find(x => x.id === e.target.dataset.id);
+      if(!c) return;
+      c.status = (c.status === 'wrong') ? null : 'wrong';
+      saveCards();
+      renderList();
+      renderReview();
+      renderStats();
+    });
+  });
+  area.querySelectorAll('.status-correct-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const c = cards.find(x => x.id === e.target.dataset.id);
+      if(!c) return;
+      c.status = (c.status === 'correct') ? null : 'correct';
+      saveCards();
+      renderList();
+      renderReview();
+      renderStats();
+    });
+  });
+  area.querySelectorAll('.ref-toggle-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      document.getElementById('list-ref-' + e.target.dataset.id).classList.toggle('show');
+    });
+  });
+  area.querySelectorAll('.edit-toggle-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      document.getElementById('edit-form-' + e.target.dataset.id).classList.toggle('show');
+    });
+  });
+  area.querySelectorAll('.cancel-edit-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      document.getElementById('edit-form-' + e.target.dataset.id).classList.remove('show');
+    });
+  });
+  area.querySelectorAll('.save-edit-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const id = e.target.dataset.id;
+      const form = document.getElementById('edit-form-' + id);
+      const q = form.querySelector('.edit-q').value.trim();
+      const starter = form.querySelector('.edit-starter').value.trim();
+      const ref = form.querySelector('.edit-ref').value.trim();
+      if(!q) return;
+      const c = cards.find(x => x.id === id);
+      if(!c) return;
+      c.q = q;
+      c.starter = starter;
+      c.ref = ref;
+      saveCards();
+      renderList();
+      renderReview();
+      renderStats();
+    });
+  });
+  area.querySelectorAll('.del-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const id = e.target.dataset.id;
+      const idx = cards.findIndex(x => x.id === id);
+      if(idx === -1) return;
+      cards.splice(idx, 1);
+      selectedIds = selectedIds.filter(x => x !== id);
+      cards.forEach(c => { if(c.parentId === id) c.parentId = null; });
+      saveCards();
+      renderReview();
+      renderList();
+      renderStats();
+    });
+  });
+  document.getElementById('select-count').textContent = `${selectedIds.length}개 선택됨`;
+  document.getElementById('selected-filter-btn').style.display = selectedIds.length ? 'inline-block' : 'none';
+}
+
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+    if(tab.dataset.tab === 'list') renderList();
+    if(tab.dataset.tab === 'add') populateParentSelect();
+  });
+});
+
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    reviewMode = btn.dataset.mode;
+    currentCard = null;
+    sessionActive = false;
+    renderReview();
+  });
+});
+
+document.getElementById('star-filter-select').addEventListener('change', (e) => {
+  starFilter = e.target.value;
+  currentCard = null;
+  sessionActive = false;
+  renderReview();
+  renderStats();
+});
+
+document.getElementById('list-sort-select').addEventListener('change', (e) => {
+  listSortMode = e.target.value;
+  renderList();
+});
+
+document.getElementById('review-selected-btn').addEventListener('click', () => {
+  if(selectedIds.length === 0){
+    alert('먼저 목록에서 문제를 선택해주세요.');
+    return;
+  }
+  reviewMode = 'selected';
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('selected-filter-btn').style.display = 'inline-block';
+  document.getElementById('selected-filter-btn').classList.add('active');
+  currentCard = null;
+  sessionActive = false;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelector('.tab[data-tab="review"]').classList.add('active');
+  document.getElementById('panel-review').classList.add('active');
+  renderReview();
+});
+
+function showBackupMsg(text, ok){
+  const msg = document.getElementById('backup-msg');
+  msg.textContent = text;
+  msg.style.background = ok ? '#eaf3de' : '#fcebeb';
+  msg.style.color = ok ? '#27500a' : '#791f1f';
+  msg.classList.add('show');
+  setTimeout(() => msg.classList.remove('show'), 2500);
+}
+
+function exportBackup(){
+  const dataStr = JSON.stringify(cards, null, 2);
+  const blob = new Blob([dataStr], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const stamp = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`;
+  a.href = url;
+  a.download = `code_flashcards_backup_${stamp}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showBackupMsg('백업 파일을 내려받았어요.', true);
+}
+
+function importBackup(file){
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    let imported;
+    try{
+      imported = JSON.parse(e.target.result);
+    }catch(err){
+      showBackupMsg('파일을 읽을 수 없어요. 올바른 백업 파일인지 확인해주세요.', false);
+      return;
+    }
+    if(!Array.isArray(imported)){
+      showBackupMsg('올바른 백업 파일 형식이 아니에요.', false);
+      return;
+    }
+    imported.forEach(c => {
+      if(!c.id) c.id = newId();
+      if(c.status === undefined) c.status = null;
+      if(c.stars === undefined || c.stars === null) c.stars = 0;
+    });
+    const replace = confirm('가져온 데이터로 전체 목록을 교체할까요?\n\n확인 = 전체 교체\n취소 = 기존 목록에 합치기 (겹치는 항목은 건너뜀)');
+    if(replace){
+      cards = imported;
+    }else{
+      const existingIds = new Set(cards.map(c => c.id));
+      const toAdd = imported.filter(c => !existingIds.has(c.id));
+      cards = cards.concat(toAdd);
+    }
+    saveCards();
+    currentCard = null;
+    renderReview();
+    renderList();
+    renderStats();
+    showBackupMsg(`불러오기 완료: 총 ${cards.length}개 문제`, true);
+  };
+  reader.onerror = () => showBackupMsg('파일을 읽는 중 오류가 발생했어요.', false);
+  reader.readAsText(file);
+}
+
+document.getElementById('reset-status-btn').addEventListener('click', () => {
+  if(cards.length === 0) return;
+  const ok = confirm('모든 문제의 채점 상태(맞음/틀림)를 기본 상태(미채점)로 되돌릴까요?\n문제 내용, 중요도, 선택 상태는 그대로 유지돼요.');
+  if(!ok) return;
+  cards.forEach(c => { c.status = null; });
+  saveCards();
+  currentCard = null;
+  sessionActive = false;
+  renderList();
+  renderReview();
+  renderStats();
+  showBackupMsg('모든 문제 상태를 초기화했어요.', true);
+});
+
+document.getElementById('export-btn').addEventListener('click', exportBackup);
+document.getElementById('import-btn').addEventListener('click', () => {
+  document.getElementById('import-file-input').click();
+});
+document.getElementById('import-file-input').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if(file) importBackup(file);
+  e.target.value = '';
+});
+
+document.getElementById('save-btn').addEventListener('click', () => {
+  const q = document.getElementById('q-input').value.trim();
+  const starter = document.getElementById('starter-input').value.trim();
+  const ref = document.getElementById('ref-input').value.trim();
+  const parentId = document.getElementById('parent-input').value || null;
+  const msg = document.getElementById('save-msg');
+  if(!q){
+    msg.textContent = '문제 내용을 입력해주세요.';
+    msg.style.background = '#fcebeb'; msg.style.color = '#791f1f';
+    msg.classList.add('show');
+    return;
+  }
+  cards.push({id:newId(), q, starter, ref, parentId, status:null, stars:0});
+  saveCards();
+  document.getElementById('q-input').value = '';
+  document.getElementById('starter-input').value = 'def solve(price):\n    ';
+  document.getElementById('ref-input').value = '';
+  document.getElementById('parent-input').value = '';
+  msg.textContent = '카드가 저장됐어요!';
+  msg.style.background = '#eaf3de'; msg.style.color = '#27500a';
+  msg.classList.add('show');
+  setTimeout(()=> msg.classList.remove('show'), 2000);
+  currentCard = null;
+  renderReview();
+  renderStats();
+});
+
+async function init(){
+  loadCards();
+  renderReview();
+  renderStats();
+  const statusMsg = document.getElementById('status-msg');
+  try{
+    pyodide = await loadPyodide();
+    statusMsg.textContent = '내가 만든 코딩 문제를 랜덤으로 풀고, 직접 코드를 실행해서 확인해보세요.';
+  }catch(e){
+    statusMsg.textContent = '파이썬 실행 환경 로딩에 실패했어요. 인터넷 연결을 확인해주세요.';
+  }
+}
+init();
+</script>
+</body>
+</html>
