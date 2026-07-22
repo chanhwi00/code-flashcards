@@ -99,12 +99,21 @@
   .list-item.is-child::before{content:"↳"; position:absolute; left:-20px; top:12px; color:#a8a49a; font-size:13px;}
 
   .star-filter-select{width:auto; font-size:13px; padding:6px 10px; border-radius:20px;}
+
+  .sync-row{display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap;}
+  .sync-row button{font-size:12px; padding:6px 12px;}
+  .drive-status-text{font-size:12px; color:#6b6a64;}
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>코딩 문제 카드장</h1>
   <p class="sub" id="status-msg">파이썬 실행 환경 로딩 중...</p>
+
+  <div class="sync-row" id="sync-row">
+    <button id="drive-login-btn">🔗 구글 드라이브 연동하기</button>
+    <span class="drive-status-text" id="drive-status"></span>
+  </div>
 
   <div class="tabs">
     <div class="tab active" data-tab="review">복습하기</div>
@@ -177,6 +186,7 @@
   </div>
 </div>
 
+<script src="https://accounts.google.com/gsi/client"></script>
 <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
 <script>
 const STORAGE_KEY = 'code_flashcards_data_v1';
@@ -191,6 +201,16 @@ let reviewQueue = [];   // 이번 라운드에서 뽑을 카드 id들을 순서�
 let queueIndex = -1;    // reviewQueue에서 현재 위치
 let sessionActive = false; // "시작!"을 눌러 큐가 준비된 상태인지
 let sessionDone = false;   // 이번 라운드의 큐를 다 돌았는지
+
+// ---- 구글 드라이브 연동 ----
+const GOOGLE_CLIENT_ID = '59939161608-6od2m2693edbsinkr75iutegunh30tvk.apps.googleusercontent.com';
+const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+const DRIVE_FILENAME = 'code_flashcards_data.json';
+let tokenClient = null;
+let driveAccessToken = null;
+let driveFileId = null;
+let driveSyncEnabled = false;
+let driveSaveTimer = null;
 
 function esc(s){
   const d = document.createElement('div');
@@ -218,7 +238,169 @@ function loadCards(){
 }
 function saveCards(){
   localStorage.setItem(STORAGE_KEY, JSON.stringify(cards));
+  if(driveSyncEnabled && driveAccessToken && driveFileId){
+    if(driveSaveTimer) clearTimeout(driveSaveTimer);
+    // 짧은 시간 안에 여러 번 저장되는 걸 묶어서 API 호출 횟수를 줄임
+    driveSaveTimer = setTimeout(() => {
+      driveWriteFile(driveAccessToken, driveFileId, cards).then(() => {
+        setDriveStatus('✅ 구글 드라이브에 저장됨', true);
+      }).catch(err => {
+        console.error('드라이브 저장 실패', err);
+        if(err && err.message === 'AUTH_EXPIRED'){
+          driveSyncEnabled = false;
+          updateDriveButtonUI();
+          setDriveStatus('⚠️ 로그인이 만료됐어요. "구글 드라이브 연동하기"를 다시 눌러주세요.', false);
+        }else{
+          setDriveStatus('⚠️ 드라이브 저장 실패 - 인터넷 연결을 확인해주세요.', false);
+        }
+      });
+    }, 600);
+  }
 }
+
+// ---- 구글 드라이브 API 헬퍼 함수들 ----
+
+function setDriveStatus(text, ok){
+  const el = document.getElementById('drive-status');
+  if(!el) return;
+  el.textContent = text;
+  el.style.color = ok === true ? '#27500a' : (ok === false ? '#791f1f' : '#6b6a64');
+}
+
+function updateDriveButtonUI(){
+  const btn = document.getElementById('drive-login-btn');
+  if(!btn) return;
+  btn.textContent = driveSyncEnabled ? '🔗 구글 드라이브 연동됨 (다시 로그인)' : '🔗 구글 드라이브 연동하기';
+}
+
+// 드라이브에서 우리 앱 전용 파일을 찾고, 없으면 새로 만듦
+async function driveFindOrCreateFile(token){
+  const q = encodeURIComponent(`name='${DRIVE_FILENAME}' and trashed=false`);
+  const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&spaces=drive&fields=files(id,name)`, {
+    headers: { Authorization: 'Bearer ' + token }
+  });
+  if(searchRes.status === 401) throw new Error('AUTH_EXPIRED');
+  const searchData = await searchRes.json();
+  if(searchData.files && searchData.files.length > 0){
+    return { id: searchData.files[0].id, isNew: false };
+  }
+  const boundary = 'flashcards_boundary_xyz';
+  const metadata = { name: DRIVE_FILENAME, mimeType: 'application/json' };
+  const body =
+    `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n` +
+    `--${boundary}\r\nContent-Type: application/json\r\n\r\n[]\r\n` +
+    `--${boundary}--`;
+  const createRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+    method: 'POST',
+    headers: {
+      Authorization: 'Bearer ' + token,
+      'Content-Type': `multipart/related; boundary=${boundary}`
+    },
+    body
+  });
+  if(createRes.status === 401) throw new Error('AUTH_EXPIRED');
+  const createData = await createRes.json();
+  return { id: createData.id, isNew: true };
+}
+
+async function driveReadFile(token, fileId){
+  const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+    headers: { Authorization: 'Bearer ' + token }
+  });
+  if(res.status === 401) throw new Error('AUTH_EXPIRED');
+  if(!res.ok) throw new Error('READ_FAILED');
+  const text = await res.text();
+  try{
+    return JSON.parse(text);
+  }catch(e){
+    return [];
+  }
+}
+
+async function driveWriteFile(token, fileId, dataArr){
+  const res = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: 'Bearer ' + token,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(dataArr)
+  });
+  if(res.status === 401) throw new Error('AUTH_EXPIRED');
+  if(!res.ok) throw new Error('WRITE_FAILED');
+}
+
+// "구글 드라이브 연동하기" 버튼 클릭
+function connectDrive(){
+  if(!tokenClient){
+    setDriveStatus('구글 로그인 준비 중이에요. 잠시 후 다시 시도해주세요.', false);
+    return;
+  }
+  tokenClient.requestAccessToken({ prompt: driveAccessToken ? '' : 'consent' });
+}
+
+// 구글 로그인 성공 후 콜백
+function onDriveToken(resp){
+  if(resp.error){
+    setDriveStatus('로그인에 실패했어요: ' + resp.error, false);
+    return;
+  }
+  driveAccessToken = resp.access_token;
+  handleAfterDriveLogin();
+}
+
+async function handleAfterDriveLogin(){
+  setDriveStatus('구글 드라이브와 동기화하는 중...', null);
+  try{
+    const { id, isNew } = await driveFindOrCreateFile(driveAccessToken);
+    driveFileId = id;
+    if(isNew){
+      // 새로 만든 파일이라 지금 가지고 있는 로컬 카드를 그대로 올려보냄
+      await driveWriteFile(driveAccessToken, driveFileId, cards);
+    }else{
+      // 이미 있던 파일이면 드라이브 내용으로 화면을 갱신 (다른 컴퓨터에서 만든 데이터일 수 있음)
+      const remote = await driveReadFile(driveAccessToken, driveFileId);
+      if(Array.isArray(remote)){
+        cards = remote;
+        cards.forEach(c => {
+          if(!c.id) c.id = newId();
+          if(c.status === undefined) c.status = null;
+          if(c.stars === undefined || c.stars === null) c.stars = 0;
+        });
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(cards));
+      }
+    }
+    driveSyncEnabled = true;
+    updateDriveButtonUI();
+    currentCard = null;
+    sessionActive = false;
+    sessionDone = false;
+    renderList();
+    renderReview();
+    renderStats();
+    setDriveStatus('✅ 구글 드라이브와 연동됐어요. 이제부터 자동으로 저장돼요.', true);
+  }catch(e){
+    console.error(e);
+    if(e && e.message === 'AUTH_EXPIRED'){
+      setDriveStatus('⚠️ 로그인이 만료됐어요. 버튼을 다시 눌러주세요.', false);
+    }else{
+      setDriveStatus('⚠️ 구글 드라이브 연동 중 오류가 발생했어요.', false);
+    }
+  }
+}
+
+function initGoogleAuth(){
+  if(typeof google === 'undefined' || !google.accounts){
+    setDriveStatus('구글 로그인 스크립트를 불러오지 못했어요. 새로고침 해보세요.', false);
+    return;
+  }
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope: DRIVE_SCOPE,
+    callback: onDriveToken
+  });
+}
+
 
 function isUnlocked(card){
   if(!card.parentId) return true;
@@ -896,6 +1078,8 @@ async function init(){
   loadCards();
   renderReview();
   renderStats();
+  document.getElementById('drive-login-btn').addEventListener('click', connectDrive);
+  initGoogleAuth();
   const statusMsg = document.getElementById('status-msg');
   try{
     pyodide = await loadPyodide();
