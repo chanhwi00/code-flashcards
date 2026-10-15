@@ -30,6 +30,7 @@ document.getElementById('star-filter-select').addEventListener('change', (e) => 
 
 document.getElementById('list-sort-select').addEventListener('change', (e) => {
   listSortMode = e.target.value;
+  listPage = 1;
   renderList();
 });
 
@@ -154,7 +155,7 @@ document.getElementById('save-btn').addEventListener('click', () => {
   cards.push({id:newId(), q, starter, ref, parentId, status:null, stars:0});
   saveCards();
   document.getElementById('q-input').value = '';
-  document.getElementById('starter-input').value = 'def solve(price):\n    ';
+  document.getElementById('starter-input').value = '';
   document.getElementById('ref-input').value = '';
   document.getElementById('parent-input').value = '';
   msg.textContent = '카드가 저장됐어요!';

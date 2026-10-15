@@ -1,3 +1,6 @@
+const LIST_PAGE_SIZE = 7;
+let listPage = 1;
+
 function statusRank(c){
   if(c.status === 'correct') return 2;
   if(c.status === 'wrong') return 1;
@@ -46,13 +49,19 @@ function getSortedFlatList(mode){
 
 function renderList(){
   const area = document.getElementById('list-area');
+  const pagination = document.getElementById('list-pagination');
   if(cards.length === 0){
+    pagination.innerHTML = '';
+    listPage = 1;
     area.innerHTML = '<div class="empty">저장된 문제가 없어요.</div>';
     document.getElementById('select-count').textContent = '0개 선택됨';
     return;
   }
   const flat = getSortedFlatList(listSortMode);
-  area.innerHTML = flat.map(({card: c, depth}) => {
+  const totalPages = Math.ceil(flat.length / LIST_PAGE_SIZE);
+  listPage = Math.max(1, Math.min(listPage, totalPages));
+  const pageItems = flat.slice((listPage - 1) * LIST_PAGE_SIZE, listPage * LIST_PAGE_SIZE);
+  area.innerHTML = pageItems.map(({card: c, depth}) => {
     let statusBadge = '';
     if(c.status === 'correct') statusBadge = '<span class="badge" style="background:#eaf3de;color:#27500a;">맞음</span>';
     else if(c.status === 'wrong') statusBadge = '<span class="badge" style="background:#fcebeb;color:#791f1f;">틀림</span>';
@@ -86,11 +95,11 @@ function renderList(){
       <div class="list-ref" id="list-ref-${c.id}">${c.ref ? esc(c.ref) : '(등록된 참고 정답이 없어요)'}</div>
       <div class="edit-form" id="edit-form-${c.id}">
         <label>문제</label>
-        <textarea class="edit-q" style="min-height:60px;">${esc(c.q)}</textarea>
+        <textarea class="edit-q" >${esc(c.q)}</textarea>
         <label>시작 코드</label>
-        <textarea class="edit-starter" style="min-height:40px;">${esc(c.starter || '')}</textarea>
+        <textarea class="edit-starter" >${esc(c.starter || '')}</textarea>
         <label>참고 정답</label>
-        <textarea class="edit-ref" style="min-height:60px;">${esc(c.ref || '')}</textarea>
+        <textarea class="edit-ref" >${esc(c.ref || '')}</textarea>
         <div class="row">
           <button class="primary grow save-edit-btn" data-id="${c.id}">저장</button>
           <button class="cancel-edit-btn" data-id="${c.id}">취소</button>
@@ -194,4 +203,28 @@ function renderList(){
   });
   document.getElementById('select-count').textContent = `${selectedIds.length}개 선택됨`;
   document.getElementById('selected-filter-btn').style.display = selectedIds.length ? 'inline-block' : 'none';
+
+  // 전체 목록은 한 페이지에 최대 7개씩 표시한다.
+  if(totalPages <= 1){
+    pagination.innerHTML = '';
+  }else{
+    const pageButtons = Array.from({length: totalPages}, (_, i) => {
+      const n = i + 1;
+      return `<button type="button" data-page="${n}" class="${n === listPage ? 'active' : ''}" ${n === listPage ? 'aria-current="page"' : ''}>${n}</button>`;
+    }).join('');
+    pagination.innerHTML = `
+      <button type="button" data-page="${listPage - 1}" ${listPage === 1 ? 'disabled' : ''}>← 이전</button>
+      <span class="pagination-pages">${pageButtons}</span>
+      <button type="button" data-page="${listPage + 1}" ${listPage === totalPages ? 'disabled' : ''}>다음 →</button>
+      <span class="pagination-count">${listPage} / ${totalPages} 페이지 · 전체 ${flat.length}개</span>`;
+    pagination.querySelectorAll('button[data-page]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const next = Number(btn.dataset.page);
+        if(next < 1 || next > totalPages || next === listPage) return;
+        listPage = next;
+        renderList();
+        document.getElementById('panel-list').scrollIntoView({block:'start', behavior:'auto'});
+      });
+    });
+  }
 }

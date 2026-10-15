@@ -38,6 +38,7 @@
     <div class="stats">
       <span class="pill" id="stat-total">전체 0개</span>
       <span class="pill" id="stat-pool">복습 대상 0개</span>
+      <span class="pill" id="stat-progress" style="display:none; font-weight:600;">현재 1 / 1번</span>
     </div>
     <div id="review-area"></div>
   </div>
@@ -46,10 +47,9 @@
     <label>문제</label>
     <textarea id="q-input" style="min-height:70px;" placeholder="문제 내용을 적어주세요"></textarea>
     <label>시작 코드 (함수 선언부, 선택)</label>
-    <textarea id="starter-input" style="min-height:50px;">def solve(price):
-    </textarea>
+    <textarea id="starter-input" placeholder="필요하면 시작 코드를 입력하세요"></textarea>
     <label>참고 정답 (선택)</label>
-    <textarea id="ref-input" style="min-height:70px;" placeholder="내 모범 풀이나 힌트를 적어두세요"></textarea>
+    <textarea id="ref-input" placeholder="내 모범 풀이나 힌트를 적어두세요"></textarea>
     <label>선행 문제 (선택 — 맞혀야 이 문제가 열려요)</label>
     <select id="parent-input">
       <option value="">없음 (독립 문제)</option>
@@ -83,6 +83,7 @@
       <button id="review-selected-btn">선택한 문제만 복습하기</button>
     </div>
     <div id="list-area"></div>
+    <nav id="list-pagination" class="pagination" aria-label="전체 목록 페이지"></nav>
   </div>
 </div>
 

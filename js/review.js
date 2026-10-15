@@ -142,6 +142,16 @@ function setStars(id, val){
 function renderStats(){
   document.getElementById('stat-total').textContent = `전체 ${cards.length}개`;
   document.getElementById('stat-pool').textContent = `복습 대상 ${getPool().length}개`;
+  const progress = document.getElementById('stat-progress');
+  if(sessionActive && reviewQueue.length > 0){
+    const current = sessionDone ? reviewQueue.length : Math.min(queueIndex + 1, reviewQueue.length);
+    progress.textContent = sessionDone
+      ? `${reviewQueue.length} / ${reviewQueue.length} 완료`
+      : `현재 ${current} / ${reviewQueue.length}번`;
+    progress.style.display = '';
+  }else{
+    progress.style.display = 'none';
+  }
 }
 
 function renderReview(){
