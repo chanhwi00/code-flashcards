@@ -81,7 +81,7 @@ function renderList(){
         <input type="checkbox" class="sel-checkbox" data-id="${c.id}" ${checked}>
         <div style="flex:1;">
           <div class="q">${esc(c.q)}</div>
-          <div>${statusBadge} ${lockBadge} ${starWidgetHtml(c, 'list')} <span class="card-category-label">📁 ${esc(c.category || '미분류')}</span></div>
+          <div>${statusBadge} ${lockBadge} ${starWidgetHtml(c, 'list')}</div>
         </div>
       </div>
       <div class="status-toggle-row">
@@ -89,7 +89,7 @@ function renderList(){
         <button class="correct status-correct-btn ${c.status === 'correct' ? 'active' : ''}" data-id="${c.id}">맞았어요</button>
       </div>
       <div class="card-category-edit">
-        <button class="category-toggle-btn" type="button" data-id="${c.id}">📁 카테고리 변경 ▾</button>
+        <button class="category-toggle-btn" type="button" data-id="${c.id}">📁 ${esc(c.category || '미분류')} ▾</button>
         <div class="category-picker" id="category-picker-${c.id}" hidden>
           <select class="category-card-select" data-id="${c.id}">${categoryOptions(c.category || '')}</select>
         </div>
@@ -260,15 +260,66 @@ function renderAddCategorySelect(){
   select.innerHTML = categoryOptions(old);
   select.value = old && allCategoryNames().includes(old) ? old : '';
 }
+function renameCategory(name){
+  if(!name) return; // 미분류는 고정 항목
+  const entered = prompt('카테고리 이름 변경', name);
+  if(entered === null) return;
+  const next = entered.trim();
+  if(!next || next.length > 40){ alert('이름은 1~40자로 입력해주세요.'); return; }
+  if(next === name) return;
+  if(allCategoryNames().includes(next)){ alert('이미 있는 카테고리예요.'); return; }
+  categories = [...new Set([...categories.filter(c => c !== name), next])];
+  cards.forEach(card => { if(card.category === name) card.category = next; });
+  if(selectedCategories.delete(name)) selectedCategories.add(next);
+  saveCards(); renderCategoryControls(); renderList();
+}
+function deleteCategory(name){
+  if(!name) return;
+  const count = cards.filter(card => card.category === name).length;
+  if(!confirm(`「${name}」 카테고리를 삭제할까요?\n소속 문제 ${count}개는 삭제되지 않고 '미분류'로 이동합니다.`)) return;
+  categories = categories.filter(c => c !== name);
+  cards.forEach(card => { if(card.category === name) card.category = ''; });
+  selectedCategories.delete(name);
+  saveCards(); renderCategoryControls(); renderList();
+}
+function closeCategoryMenu(){
+  document.querySelectorAll('.category-context-menu').forEach(menu => menu.remove());
+}
+function showCategoryMenu(event, name){
+  event.preventDefault();
+  closeCategoryMenu();
+  if(!name) return; // 미분류는 이름 변경/삭제 불가
+  const menu = document.createElement('div');
+  menu.className = 'category-context-menu';
+  menu.innerHTML = '<button type="button" data-action="rename">✏️ 이름 변경</button><button type="button" data-action="delete">🗑️ 삭제</button>';
+  document.body.appendChild(menu);
+  const x = Math.max(8, Math.min(event.clientX, window.innerWidth - menu.offsetWidth - 8));
+  const y = Math.max(8, Math.min(event.clientY, window.innerHeight - menu.offsetHeight - 8));
+  menu.style.left = x + 'px'; menu.style.top = y + 'px';
+  menu.addEventListener('click', e => {
+    const action = e.target.closest('button')?.dataset.action;
+    closeCategoryMenu();
+    if(action === 'rename') renameCategory(name);
+    if(action === 'delete') deleteCategory(name);
+  });
+}
+document.addEventListener('click', e => { if(!e.target.closest('.category-context-menu')) closeCategoryMenu(); });
+document.addEventListener('keydown', e => { if(e.key === 'Escape') closeCategoryMenu(); });
+document.addEventListener('scroll', closeCategoryMenu, true);
 function renderCategoryControls(){
+  closeCategoryMenu();
   const area = document.getElementById('category-filter-area');
   const names = allCategoryNames();
   const namesWithUncategorized = ['', ...names];
-  area.innerHTML = namesWithUncategorized.map(name => {
+  area.innerHTML = namesWithUncategorized.map((name, index) => {
     const count = cards.filter(c => (c.category || '') === name).length;
     const checked = selectedCategories.has(name) ? 'checked' : '';
-    return `<label class="category-chip ${checked ? 'selected' : ''}"><input type="checkbox" value="${esc(name)}" ${checked}>📁 ${name ? esc(name) : '미분류'} <small>${count}</small></label>`;
+    return `<label class="category-chip ${checked ? 'selected' : ''}" data-category-index="${index}"><input type="checkbox" value="${esc(name)}" ${checked}>📁 ${name ? esc(name) : '미분류'} <small>${count}</small></label>`;
   }).join('');
+  area.querySelectorAll('.category-chip').forEach(chip => {
+    const name = namesWithUncategorized[Number(chip.dataset.categoryIndex)];
+    chip.addEventListener('contextmenu', e => showCategoryMenu(e, name));
+  });
   area.querySelectorAll('input').forEach(input => input.addEventListener('change', () => {
     if(input.checked) selectedCategories.add(input.value);
     else selectedCategories.delete(input.value);

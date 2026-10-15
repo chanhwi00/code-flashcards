@@ -127,3 +127,8 @@
 .card-category-edit button{font-size:12px;padding:5px 10px;}
 .category-picker{margin-top:7px;max-width:320px;}
 .category-picker[hidden]{display:none;}
+
+.category-context-menu{position:fixed;z-index:9999;min-width:145px;padding:5px;background:#fff;border:1px solid #d9d5cc;border-radius:9px;box-shadow:0 5px 22px #0002;}
+.category-context-menu button{display:block;width:100%;text-align:left;border:0;background:transparent;padding:9px 12px;font-size:13px;border-radius:5px;cursor:pointer;color:#333;}
+.category-context-menu button:hover{background:#f1efe8;}
+.category-context-menu button[data-action="delete"]{color:#b42318;}
