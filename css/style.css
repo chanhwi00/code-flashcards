@@ -110,3 +110,20 @@
 .pagination button.active { background:#2c2c2a; color:#fff; border-color:#2c2c2a; font-weight:600; }
 .pagination button:disabled { opacity:.4; cursor:not-allowed; }
 .pagination-count { flex-basis:100%; text-align:center; font-size:12px; color:#6b6a64; margin-top:3px; }
+
+
+/* 카테고리 필터와 카드별 카테고리 변경 */
+.category-section{margin:14px 0 16px;padding:12px 14px;border:1px solid #e3e1db;border-radius:12px;background:#fff;}
+.category-header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;font-size:14px;}
+.category-header button{padding:6px 10px;font-size:12px;}
+.category-scroll{display:flex;flex-wrap:wrap;gap:7px;max-height:115px;overflow-y:auto;align-content:flex-start;}
+.category-chip{display:inline-flex;align-items:center;gap:5px;margin:0;padding:7px 10px;border:1px solid #d9d5cc;border-radius:8px;background:#faf9f6;cursor:pointer;color:#333;font-size:12px;}
+.category-chip.selected{background:#e6f1fb;border-color:#80b9e8;}
+.category-chip input{margin:0;}
+.category-chip small{color:#777;}
+.category-hint{font-size:11px;color:#777;margin:9px 0 0;}
+.card-category-label{font-size:11px;color:#777;margin-left:5px;}
+.card-category-edit{margin-top:7px;}
+.card-category-edit button{font-size:12px;padding:5px 10px;}
+.category-picker{margin-top:7px;max-width:320px;}
+.category-picker[hidden]{display:none;}

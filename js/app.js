@@ -4,8 +4,8 @@ document.querySelectorAll('.tab').forEach(tab => {
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
     tab.classList.add('active');
     document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
-    if(tab.dataset.tab === 'list') renderList();
-    if(tab.dataset.tab === 'add') populateParentSelect();
+    if(tab.dataset.tab === 'list'){ renderCategoryControls(); renderList(); }
+    if(tab.dataset.tab === 'add'){ populateParentSelect(); renderAddCategorySelect(); }
   });
 });
 
@@ -62,7 +62,7 @@ function showBackupMsg(text, ok){
 }
 
 function exportBackup(){
-  const dataStr = JSON.stringify(cards, null, 2);
+  const dataStr = JSON.stringify({cards, categories}, null, 2);
   const blob = new Blob([dataStr], {type: 'application/json'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -88,10 +88,12 @@ function importBackup(file){
       showBackupMsg('파일을 읽을 수 없어요. 올바른 백업 파일인지 확인해주세요.', false);
       return;
     }
-    if(!Array.isArray(imported)){
+    if(!Array.isArray(imported) && !(imported && Array.isArray(imported.cards))){
       showBackupMsg('올바른 백업 파일 형식이 아니에요.', false);
       return;
     }
+    const importedCategories = Array.isArray(imported) ? [] : (Array.isArray(imported.categories) ? imported.categories : []);
+    imported = Array.isArray(imported) ? imported : imported.cards;
     imported.forEach(c => {
       if(!c.id) c.id = newId();
       if(c.status === undefined) c.status = null;
@@ -100,12 +102,15 @@ function importBackup(file){
     const replace = confirm('가져온 데이터로 전체 목록을 교체할까요?\n\n확인 = 전체 교체\n취소 = 기존 목록에 합치기 (겹치는 항목은 건너뜀)');
     if(replace){
       cards = imported;
+      categories = importedCategories;
     }else{
       const existingIds = new Set(cards.map(c => c.id));
       const toAdd = imported.filter(c => !existingIds.has(c.id));
       cards = cards.concat(toAdd);
+      categories = [...new Set([...categories, ...importedCategories])];
     }
     saveCards();
+    renderCategoryControls();
     currentCard = null;
     renderReview();
     renderList();
@@ -145,6 +150,7 @@ document.getElementById('save-btn').addEventListener('click', () => {
   const starter = document.getElementById('starter-input').value.trim();
   const ref = document.getElementById('ref-input').value.trim();
   const parentId = document.getElementById('parent-input').value || null;
+  const category = document.getElementById('add-category-select').value;
   const msg = document.getElementById('save-msg');
   if(!q){
     msg.textContent = '문제 내용을 입력해주세요.';
@@ -152,12 +158,13 @@ document.getElementById('save-btn').addEventListener('click', () => {
     msg.classList.add('show');
     return;
   }
-  cards.push({id:newId(), q, starter, ref, parentId, status:null, stars:0});
+  cards.push({id:newId(), q, starter, ref, parentId, category, status:null, stars:0});
   saveCards();
   document.getElementById('q-input').value = '';
   document.getElementById('starter-input').value = '';
   document.getElementById('ref-input').value = '';
   document.getElementById('parent-input').value = '';
+  document.getElementById('add-category-select').value = '';
   msg.textContent = '카드가 저장됐어요!';
   msg.style.background = '#eaf3de'; msg.style.color = '#27500a';
   msg.classList.add('show');
@@ -169,6 +176,7 @@ document.getElementById('save-btn').addEventListener('click', () => {
 
 async function init(){
   loadCards();
+  renderCategoryControls();
   renderReview();
   renderStats();
   document.getElementById('drive-login-btn').addEventListener('click', connectDrive);
@@ -182,3 +190,15 @@ async function init(){
   }
 }
 init();
+
+
+document.getElementById('category-create-btn').addEventListener('click', () => {
+  const name = prompt('새 카테고리 이름을 입력하세요.');
+  if(name === null) return;
+  const trimmed = name.trim();
+  if(!trimmed){ alert('카테고리 이름을 입력해주세요.'); return; }
+  if(trimmed.length > 40){ alert('카테고리 이름은 40자 이하로 입력해주세요.'); return; }
+  if(allCategoryNames().includes(trimmed)){ alert('이미 있는 카테고리예요.'); return; }
+  categories.push(trimmed);
+  saveCards(); renderCategoryControls(); renderList();
+});

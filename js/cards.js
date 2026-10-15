@@ -57,9 +57,10 @@ function renderList(){
     document.getElementById('select-count').textContent = '0개 선택됨';
     return;
   }
-  const flat = getSortedFlatList(listSortMode);
+  const flat = getSortedFlatList(listSortMode).filter(({card}) => selectedCategories.size === 0 || selectedCategories.has(card.category || '')); 
   const totalPages = Math.ceil(flat.length / LIST_PAGE_SIZE);
   listPage = Math.max(1, Math.min(listPage, totalPages));
+  if(flat.length === 0){ area.innerHTML = '<div class="empty">선택한 카테고리에 문제가 없어요.</div>'; pagination.innerHTML = ''; return; }
   const pageItems = flat.slice((listPage - 1) * LIST_PAGE_SIZE, listPage * LIST_PAGE_SIZE);
   area.innerHTML = pageItems.map(({card: c, depth}) => {
     let statusBadge = '';
@@ -80,12 +81,18 @@ function renderList(){
         <input type="checkbox" class="sel-checkbox" data-id="${c.id}" ${checked}>
         <div style="flex:1;">
           <div class="q">${esc(c.q)}</div>
-          <div>${statusBadge} ${lockBadge} ${starWidgetHtml(c, 'list')}</div>
+          <div>${statusBadge} ${lockBadge} ${starWidgetHtml(c, 'list')} <span class="card-category-label">📁 ${esc(c.category || '미분류')}</span></div>
         </div>
       </div>
       <div class="status-toggle-row">
         <button class="wrong status-wrong-btn ${c.status === 'wrong' ? 'active' : ''}" data-id="${c.id}">틀렸어요</button>
         <button class="correct status-correct-btn ${c.status === 'correct' ? 'active' : ''}" data-id="${c.id}">맞았어요</button>
+      </div>
+      <div class="card-category-edit">
+        <button class="category-toggle-btn" type="button" data-id="${c.id}">📁 카테고리 변경 ▾</button>
+        <div class="category-picker" id="category-picker-${c.id}" hidden>
+          <select class="category-card-select" data-id="${c.id}">${categoryOptions(c.category || '')}</select>
+        </div>
       </div>
       <div class="list-actions">
         <button class="ref-toggle-btn" data-id="${c.id}">정답보기</button>
@@ -109,6 +116,16 @@ function renderList(){
   `;
   }).join('');
 
+  area.querySelectorAll('.category-toggle-btn').forEach(btn => btn.addEventListener('click', () => {
+    const picker = document.getElementById('category-picker-' + btn.dataset.id);
+    picker.hidden = !picker.hidden;
+  }));
+  area.querySelectorAll('.category-card-select').forEach(sel => sel.addEventListener('change', () => {
+    const card = cards.find(c => c.id === sel.dataset.id);
+    if(!card) return;
+    card.category = sel.value;
+    saveCards(); renderCategoryControls(); renderList();
+  }));
   area.querySelectorAll('.sel-checkbox').forEach(box => {
     box.addEventListener('change', (e) => {
       const id = e.target.dataset.id;
@@ -227,4 +244,36 @@ function renderList(){
       });
     });
   }
+}
+
+
+function allCategoryNames(){
+  return [...new Set([...categories, ...cards.map(c => c.category).filter(Boolean)])];
+}
+function categoryOptions(current){
+  return '<option value="">미분류</option>' + allCategoryNames().map(name =>
+    `<option value="${esc(name)}" ${name === current ? 'selected' : ''}>${esc(name)}</option>`).join('');
+}
+function renderAddCategorySelect(){
+  const select = document.getElementById('add-category-select');
+  const old = select.value;
+  select.innerHTML = categoryOptions(old);
+  select.value = old && allCategoryNames().includes(old) ? old : '';
+}
+function renderCategoryControls(){
+  const area = document.getElementById('category-filter-area');
+  const names = allCategoryNames();
+  const namesWithUncategorized = ['', ...names];
+  area.innerHTML = namesWithUncategorized.map(name => {
+    const count = cards.filter(c => (c.category || '') === name).length;
+    const checked = selectedCategories.has(name) ? 'checked' : '';
+    return `<label class="category-chip ${checked ? 'selected' : ''}"><input type="checkbox" value="${esc(name)}" ${checked}>📁 ${name ? esc(name) : '미분류'} <small>${count}</small></label>`;
+  }).join('');
+  area.querySelectorAll('input').forEach(input => input.addEventListener('change', () => {
+    if(input.checked) selectedCategories.add(input.value);
+    else selectedCategories.delete(input.value);
+    listPage = 1;
+    renderCategoryControls(); renderList();
+  }));
+  renderAddCategorySelect();
 }

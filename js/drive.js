@@ -96,18 +96,19 @@ async function handleAfterDriveLogin(){
     driveFileId = id;
     if(isNew){
       // 새로 만든 파일이라 지금 가지고 있는 로컬 카드를 그대로 올려보냄
-      await driveWriteFile(driveAccessToken, driveFileId, cards);
+      await driveWriteFile(driveAccessToken, driveFileId, {cards, categories});
     }else{
       // 이미 있던 파일이면 드라이브 내용으로 화면을 갱신 (다른 컴퓨터에서 만든 데이터일 수 있음)
       const remote = await driveReadFile(driveAccessToken, driveFileId);
-      if(Array.isArray(remote)){
-        cards = remote;
+      if(Array.isArray(remote) || (remote && Array.isArray(remote.cards))){
+        cards = Array.isArray(remote) ? remote : remote.cards;
+        categories = Array.isArray(remote.categories) ? remote.categories : [];
         cards.forEach(c => {
           if(!c.id) c.id = newId();
           if(c.status === undefined) c.status = null;
           if(c.stars === undefined || c.stars === null) c.stars = 0;
         });
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(cards));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({cards, categories}));
       }
     }
     driveSyncEnabled = true;
@@ -115,6 +116,7 @@ async function handleAfterDriveLogin(){
     currentCard = null;
     sessionActive = false;
     sessionDone = false;
+    renderCategoryControls();
     renderList();
     renderReview();
     renderStats();

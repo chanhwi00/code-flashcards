@@ -1,5 +1,7 @@
 const STORAGE_KEY = 'code_flashcards_data_v1';
 let cards = [];
+let categories = []; // 이름 목록. 구글 드라이브에 카드와 함께 저장
+let selectedCategories = new Set(); // 비어 있으면 모든 카테고리 표시
 let pyodide = null;
 let reviewMode = 'all';
 let starFilter = '';
@@ -33,7 +35,9 @@ function newId(){
 function loadCards(){
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
-    cards = raw ? JSON.parse(raw) : [];
+    const saved = raw ? JSON.parse(raw) : [];
+    if(Array.isArray(saved)){ cards = saved; categories = []; }
+    else { cards = Array.isArray(saved.cards) ? saved.cards : []; categories = Array.isArray(saved.categories) ? saved.categories : []; }
   }catch(e){
     cards = [];
   }
@@ -46,12 +50,12 @@ function loadCards(){
   if(changed) saveCards();
 }
 function saveCards(){
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(cards));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({cards, categories}));
   if(driveSyncEnabled && driveAccessToken && driveFileId){
     if(driveSaveTimer) clearTimeout(driveSaveTimer);
     // 짧은 시간 안에 여러 번 저장되는 걸 묶어서 API 호출 횟수를 줄임
     driveSaveTimer = setTimeout(() => {
-      driveWriteFile(driveAccessToken, driveFileId, cards).then(() => {
+      driveWriteFile(driveAccessToken, driveFileId, {cards, categories}).then(() => {
         setDriveStatus('✅ 구글 드라이브에 저장됨', true);
       }).catch(err => {
         console.error('드라이브 저장 실패', err);
