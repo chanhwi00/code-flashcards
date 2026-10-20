@@ -1,3 +1,4 @@
+let pendingStudyCardId = null; // 이번 화면에서 정답/오답을 직접 선택한 문제
 function isUnlocked(card){
   if(!card.parentId) return true;
   const parent = cards.find(c => c.id === card.parentId);
@@ -67,6 +68,7 @@ function buildOrderedQueue(poolCards){
 
 // "시작!" - 현재 필터 조건에 맞는 문제 전부(잠긴 문제 포함)를 대상으로 새 라운드를 시작
 function startSession(){
+  pendingStudyCardId = null;
   const pool = getPool();
   if(pool.length === 0){
     sessionActive = false;
@@ -83,6 +85,7 @@ function startSession(){
 
 // 다음 문제로 이동. 큐를 다 쓰면 라운드 종료 — 자동으로 다시 섞지 않고 멈춘다.
 function nextCard(){
+  pendingStudyCardId = null;
   queueIndex++;
   if(queueIndex >= reviewQueue.length){
     sessionDone = true;
@@ -101,6 +104,7 @@ function nextCard(){
 
 // 이전 문제로 돌아가기. 큐의 맨 처음이면 더 갈 곳이 없음.
 function prevCard(){
+  pendingStudyCardId = null;
   if(queueIndex <= 0) return;
   queueIndex--;
   sessionDone = false;
@@ -218,6 +222,7 @@ function renderReview(){
   const defaultStarter = card.starter && card.starter.trim() ? card.starter : 'def solve():\n    pass\n\nprint(solve())';
   area.innerHTML = `
     <div class="card">
+      <div class="study-header">${lastStudyHtml(card)}</div>
       <p class="q">${esc(card.q)}</p>
       <textarea id="code-input">${esc(defaultStarter)}</textarea>
       <div class="row">
@@ -247,11 +252,13 @@ function renderReview(){
   });
   document.getElementById('mark-wrong-btn').addEventListener('click', () => {
     card.status = (card.status === 'wrong') ? null : 'wrong';
+    pendingStudyCardId = card.status ? card.id : null;
     saveCards();
     renderReview();
   });
   document.getElementById('mark-correct-btn').addEventListener('click', () => {
     card.status = (card.status === 'correct') ? null : 'correct';
+    pendingStudyCardId = card.status ? card.id : null;
     saveCards();
     renderReview();
   });
@@ -260,6 +267,10 @@ function renderReview(){
     renderReview();
   });
   document.getElementById('next-btn').addEventListener('click', () => {
+    if(pendingStudyCardId === card.id && (card.status === 'correct' || card.status === 'wrong')){
+      card.lastStudied = localStudyDate();
+      saveCards();
+    }
     nextCard();
     renderReview();
   });

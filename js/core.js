@@ -28,6 +28,17 @@ function esc(s){
   d.textContent = s || '';
   return d.innerHTML;
 }
+// 날짜는 사용자의 브라우저 현지 시간 기준으로 기록합니다.
+function localStudyDate(){
+  const d = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+function lastStudyHtml(card){
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(card.lastStudied || '') ? card.lastStudied : '없음';
+  return `<span class="last-study">마지막 학습: ${date}</span>`;
+}
+
 function newId(){
   return 'c' + Date.now() + Math.random().toString(36).slice(2);
 }

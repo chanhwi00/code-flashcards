@@ -13,6 +13,11 @@ function sortSiblings(arr, mode){
   const copy = arr.slice();
   copy.sort((a, b) => {
     let va, vb;
+    if(mode === 'study-asc'){
+      // 학습 기록이 없는 문제를 가장 오래된 것으로 취급합니다.
+      va = a.lastStudied || ''; vb = b.lastStudied || '';
+      return va < vb ? -1 : va > vb ? 1 : 0;
+    }
     if(mode.startsWith('stars')){ va = a.stars || 0; vb = b.stars || 0; }
     else { va = statusRank(a); vb = statusRank(b); }
     return asc ? va - vb : vb - va;
@@ -77,6 +82,7 @@ function renderList(){
     const childClass = depth > 0 ? 'is-child' : '';
     return `
     <div class="list-item ${childClass}" data-id="${c.id}">
+      <div class="study-header">${lastStudyHtml(c)}</div>
       <div class="list-top">
         <input type="checkbox" class="sel-checkbox" data-id="${c.id}" ${checked}>
         <div style="flex:1;">
