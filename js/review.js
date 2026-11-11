@@ -1,3 +1,6 @@
+// 현재 복습 라운드에서 실제로 실행하기를 누른 문제만 기록 (저장 데이터에는 포함하지 않음).
+const executedCardIds = new Set();
+
 function isUnlocked(card){
   if(!card.parentId) return true;
   const parent = cards.find(c => c.id === card.parentId);
@@ -72,6 +75,7 @@ function buildOrderedQueue(poolCards){
 
 // "시작!" - 현재 필터 조건에 맞는 문제 전부(잠긴 문제 포함)를 대상으로 새 라운드를 시작
 function startSession(){
+  executedCardIds.clear();
   const pool = getPool();
   if(pool.length === 0){
     sessionActive = false;
@@ -272,7 +276,7 @@ function renderReview(){
     renderReview();
   });
   document.getElementById('next-btn').addEventListener('click', () => {
-    if(card.status === 'correct' || card.status === 'wrong'){
+    if(executedCardIds.has(card.id) && (card.status === 'correct' || card.status === 'wrong')){
       card.lastStudied = localStudyDate();
       saveCards();
     }
@@ -300,6 +304,8 @@ async function runCode(){
     return;
   }
   const code = document.getElementById('code-input').value;
+  // 파이썬 환경이 준비된 상태에서 실행을 시도한 경우만 인정. 에러가 나도 실행으로 인정.
+  if(currentCard) executedCardIds.add(currentCard.id);
   let captured = '';
   pyodide.setStdout({ batched: (s) => { captured += s + '\n'; } });
   try{
