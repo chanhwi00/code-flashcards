@@ -24,6 +24,7 @@ function matchesStarFilter(c){
 function getPool(){
   return cards.filter(c => {
     if(reviewMode === 'wrong' && c.status !== 'wrong') return false;
+    if(reviewMode === 'needs-review' && !c.needsReview) return false;
     if(reviewMode === 'selected' && !selectedIds.includes(c.id)) return false;
     if(!matchesStarFilter(c)) return false;
     return true;
@@ -169,6 +170,7 @@ function renderReview(){
   if(pool.length === 0){
     let reason = '조건에 맞는 문제가 없어요.';
     if(reviewMode === 'wrong') reason = '틀린 문제가 없어요. 잘하고 있어요!';
+    if(reviewMode === 'needs-review') reason = '복습필요로 표시한 문제가 없어요.';
     if(reviewMode === 'selected') reason = '선택한 문제가 없거나 아직 잠겨있어요.';
     sessionActive = false;
     area.innerHTML = `<div class="empty">${reason}</div>`;
@@ -234,6 +236,7 @@ function renderReview(){
       <div class="row">
         <button class="wrong grow ${card.status === 'wrong' ? 'active' : ''}" id="mark-wrong-btn">틀렸어요</button>
         <button class="correct grow ${card.status === 'correct' ? 'active' : ''}" id="mark-correct-btn">맞았어요</button>
+        <button class="needs-review grow ${card.needsReview ? 'active' : ''}" id="mark-review-btn" aria-pressed="${!!card.needsReview}">복습필요</button>
       </div>
       <div class="star-row">
         <span class="label-inline">중요도</span>
@@ -259,6 +262,10 @@ function renderReview(){
     card.status = (card.status === 'correct') ? null : 'correct';
     saveCards();
     renderReview();
+  });
+  document.getElementById('mark-review-btn').addEventListener('click', () => {
+    card.needsReview = !card.needsReview;
+    saveCards(); renderReview(); renderList();
   });
   document.getElementById('prev-btn').addEventListener('click', () => {
     prevCard();

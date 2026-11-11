@@ -72,6 +72,7 @@ function renderList(){
     if(c.status === 'correct') statusBadge = '<span class="badge" style="background:#eaf3de;color:#27500a;">맞음</span>';
     else if(c.status === 'wrong') statusBadge = '<span class="badge" style="background:#fcebeb;color:#791f1f;">틀림</span>';
     else statusBadge = '<span class="badge" style="background:#f1efe8;color:#6b6a64;">미채점</span>';
+    if(c.needsReview) statusBadge += ' <span class="badge review-badge">복습필요</span>';
     let lockBadge = '';
     if(c.parentId){
       lockBadge = isUnlocked(c)
@@ -82,7 +83,10 @@ function renderList(){
     const childClass = depth > 0 ? 'is-child' : '';
     return `
     <div class="list-item ${childClass}" data-id="${c.id}">
-      <div class="study-header">${lastStudyHtml(c)}</div>
+      <div class="study-header study-date-editor">
+        <label>마지막 학습: <input type="date" class="last-study-input" data-id="${c.id}" value="${/^\d{4}-\d{2}-\d{2}$/.test(c.lastStudied || '') ? c.lastStudied : ''}" title="마지막 학습 날짜 수정"></label>
+        <button type="button" class="clear-study-btn" data-id="${c.id}" title="마지막 학습 날짜 지우기">지우기</button>
+      </div>
       <div class="list-top">
         <input type="checkbox" class="sel-checkbox" data-id="${c.id}" ${checked}>
         <div style="flex:1;">
@@ -93,6 +97,7 @@ function renderList(){
       <div class="status-toggle-row">
         <button class="wrong status-wrong-btn ${c.status === 'wrong' ? 'active' : ''}" data-id="${c.id}">틀렸어요</button>
         <button class="correct status-correct-btn ${c.status === 'correct' ? 'active' : ''}" data-id="${c.id}">맞았어요</button>
+        <button class="needs-review status-review-btn ${c.needsReview ? 'active' : ''}" data-id="${c.id}" aria-pressed="${!!c.needsReview}">복습필요</button>
       </div>
       <div class="card-category-edit">
         <button class="category-toggle-btn" type="button" data-id="${c.id}">📁 ${esc(c.category || '미분류')} ▾</button>
@@ -154,6 +159,24 @@ function renderList(){
       renderStats();
     });
   });
+  area.querySelectorAll('.last-study-input').forEach(input => input.addEventListener('change', () => {
+    const c = cards.find(x => x.id === input.dataset.id);
+    if(!c) return;
+    c.lastStudied = input.value || null;
+    saveCards(); renderList(); renderReview();
+  }));
+  area.querySelectorAll('.clear-study-btn').forEach(btn => btn.addEventListener('click', () => {
+    const c = cards.find(x => x.id === btn.dataset.id);
+    if(!c) return;
+    c.lastStudied = null;
+    saveCards(); renderList(); renderReview();
+  }));
+  area.querySelectorAll('.status-review-btn').forEach(btn => btn.addEventListener('click', () => {
+    const c = cards.find(x => x.id === btn.dataset.id);
+    if(!c) return;
+    c.needsReview = !c.needsReview;
+    saveCards(); renderList(); renderReview(); renderStats();
+  }));
   area.querySelectorAll('.status-wrong-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const c = cards.find(x => x.id === e.target.dataset.id);

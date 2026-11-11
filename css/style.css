@@ -136,3 +136,13 @@
 /* 카드 오른쪽 위 마지막 학습 날짜 */
 .study-header{display:flex;justify-content:flex-end;align-items:center;min-height:16px;margin:-5px 0 5px;}
 .last-study{font-size:12px;color:#77736b;white-space:nowrap;}
+
+/* 복습필요는 정답/오답과 독립적인 표시입니다. */
+.needs-review{background:#fff7e6;border:1px solid #e3b663;color:#865300;}
+.needs-review.active{background:#f3b94d;border-color:#c18a20;color:#332100;font-weight:700;}
+.review-badge{background:#fff1d3;color:#875400;}
+.study-date-editor{gap:6px;flex-wrap:wrap;}
+.study-date-editor label{display:flex;align-items:center;gap:5px;font-size:12px;color:#777;}
+.last-study-input{font:inherit;color:#555;border:1px solid #ddd6cc;border-radius:5px;background:white;padding:3px 5px;max-width:145px;}
+.clear-study-btn{font-size:11px;padding:3px 7px;color:#777;}
+@media(max-width:480px){.status-toggle-row{flex-wrap:wrap;}.row .needs-review{min-width:0;}}

@@ -56,6 +56,7 @@ function loadCards(){
   cards.forEach(c => {
     if(!c.id){ c.id = newId(); changed = true; }
     if(c.status === undefined){ c.status = c.completed ? 'correct' : null; changed = true; }
+    if(typeof c.needsReview !== 'boolean'){ c.needsReview = false; changed = true; }
     if(c.stars === undefined || c.stars === null){ c.stars = 0; changed = true; }
   });
   if(changed) saveCards();
